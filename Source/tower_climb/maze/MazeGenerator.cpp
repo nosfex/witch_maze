@@ -107,7 +107,27 @@ void AMazeGenerator::AddRoom()
 		}
 
 	}
+
+	// GH: Connect the rooms. Get Beginning + End and figure out how to move from there
 	
+	Room* begin = Rooms[0];
+	Room* end	= Rooms[Rooms.Num() - 1];
+
+	
+	TIndexedContainerIterator<TArray<Room*>, Room*, int32> iter = Rooms.CreateIterator();
+
+	// GH: Fuck you UE, no begin / end iterators.
+	// GH: While first!=end, run and build the list of possible connectors
+	while (*iter != end)
+	{
+		// GH: NO PARENTS, BATMAN NODE
+		if (*iter == begin)
+		{
+			(*iter)->SetParent(nullptr);
+		}
+		iter++;
+	}
+
 }
 
 bool AMazeGenerator::CreateQuadRoom(int32 x, int32 y, int32 sizeX, int32 sizeY)
@@ -148,6 +168,10 @@ bool AMazeGenerator::CreateQuadRoom(int32 x, int32 y, int32 sizeX, int32 sizeY)
 		PickPosition(positions[i].X, positions[i].Y);
 	}
 
+
+	// GH: generate the room data structure, for funsies.
+	Room* newRoom = new Room(x, y, sizeX, sizeY);
+	Rooms.Add(newRoom);
 	return true;
 }
 

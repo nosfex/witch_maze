@@ -45,10 +45,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Room)
 	float FloodFillErrorMax;
 
-
-
 private:
-
 
 	TArray<Room*> Rooms;
 	

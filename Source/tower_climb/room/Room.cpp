@@ -9,3 +9,14 @@ Room::Room()
 {
 }
 
+Room::Room(int32 nX, int32 nY, int32 w, int32 h) :
+	x(nX),
+	y(nY),
+	width(w),
+	height(h),
+	Parent(nullptr)
+{
+}
+
+
+Room::~Room() {}
