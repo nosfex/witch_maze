@@ -167,8 +167,7 @@ bool AMazeGenerator::CreateQuadRoom(int32 x, int32 y, int32 sizeX, int32 sizeY)
 	{
 		PickPosition(positions[i].X, positions[i].Y);
 	}
-
-
+	
 	// GH: generate the room data structure, for funsies.
 	Room* newRoom = new Room(x, y, sizeX, sizeY);
 	Rooms.Add(newRoom);
