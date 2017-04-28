@@ -33,5 +33,4 @@ private:
 	
 	Room* Parent;
 	TArray<Room*> NearestRooms;
-
 };

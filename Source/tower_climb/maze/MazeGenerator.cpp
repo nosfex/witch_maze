@@ -9,9 +9,6 @@ AMazeGenerator::AMazeGenerator()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-	
-
-	
 }
 
 // Called when the game starts or when spawned
@@ -26,18 +23,17 @@ void AMazeGenerator::BeginPlay()
 void AMazeGenerator::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
 }
 
 void AMazeGenerator::InitializeMap()
 {
 	for(int32 i = 0; i < MapSize; i++)
 	{
-		TArray<int> xTile;
+		TArray<int32> xTile;
 		
 		for (int32 k = 0; k < MapSize; k++)
 		{
-			int yTile = 0;
+			int32 yTile = 0;
 			xTile.Add(yTile);
 		}
 
@@ -57,8 +53,6 @@ void AMazeGenerator::PickPosition(int32 x, int32 y)
 	Tiles.Add(Tile);
 	TileMap2D[x][y] = 1;
 }
-
-
 
 void AMazeGenerator::AddRoom()
 {
@@ -109,15 +103,14 @@ void AMazeGenerator::AddRoom()
 	}
 
 	// GH: Connect the rooms. Get Beginning + End and figure out how to move from there
-	
 	Room* begin = Rooms[0];
-	Room* end	= Rooms[Rooms.Num() - 1];
-
+	Room* end	= Rooms[Rooms.Num() - 1]; 
 	
 	TIndexedContainerIterator<TArray<Room*>, Room*, int32> iter = Rooms.CreateIterator();
-
 	// GH: Fuck you UE, no begin / end iterators.
 	// GH: While first!=end, run and build the list of possible connectors
+	Room parent;
+	// GH: No euristics behind the parent selection so far.
 	while (*iter != end)
 	{
 		// GH: NO PARENTS, BATMAN NODE
@@ -125,17 +118,56 @@ void AMazeGenerator::AddRoom()
 		{
 			(*iter)->SetParent(nullptr);
 		}
+		else
+		{
+			(*iter)->SetParent(&parent);
+		}
+			
 		iter++;
+		parent = *(*iter);
 	}
 
+	AddWalkway(end);
 }
+
+void AMazeGenerator::AddWalkway(Room* start)
+{
+	// GH: Linearity is best boi
+	Room* parent = start->GetParent();
+	// GH: Room positions, start+parent
+	int32 x, y, pX, pY;
+	// GH: Get map position
+	start->GetXY(x, y);
+	parent->GetXY(pX, pY);
+
+	// GH: Get distance
+	int32 dX = abs(x - pX);
+	int32 dY = abs(y - pY);
+
+	// GH: get direction
+	int32 xDir = x - pX < 0 ? -1 : 1;
+	int32 yDir = y - pY < 0 ? -1 : 1;
+
+
+	for (int32 i = 0; i < dX; i++)
+	{
+		PickPosition(x + i * xDir, y);
+	}
+
+	for (int32 j = 0; j < dY; j++)
+	{
+		PickPosition(x , y + j * yDir);
+	}
+}
+
 
 bool AMazeGenerator::CreateQuadRoom(int32 x, int32 y, int32 sizeX, int32 sizeY)
 {
-	int32 left = x - sizeX;
-	int32 right = x + sizeX;
-	int32 top = y + sizeY;
-	int32 bottom = y - sizeY;
+	// GH: adjacent coordinates
+	int32 left		= x - sizeX;
+	int32 right		= x + sizeX;
+	int32 top		= y + sizeY;
+	int32 bottom	= y - sizeY;
 
 	if (left < 0 || right >= TileMap2D.Num())
 	{
@@ -151,7 +183,6 @@ bool AMazeGenerator::CreateQuadRoom(int32 x, int32 y, int32 sizeX, int32 sizeY)
 
 	for (int minX = left; minX < right; minX++)
 	{
-		
 		for (int minY = bottom; minY < top; minY++)
 		{
 			if(TileMap2D[minX][minY] == 1)

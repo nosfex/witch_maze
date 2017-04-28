@@ -7,7 +7,7 @@
 #include "../room/Room.h"
 #include "MazeGenerator.generated.h"
 
-UCLASS()
+UCLASS(Blueprintable)
 class TOWER_CLIMB_API AMazeGenerator : public AActor
 {
 	GENERATED_BODY()
@@ -56,7 +56,7 @@ private:
 	void PickPosition(int32 x, int32 y);
 
 	TArray<ABaseTile*> Tiles;
-
+	
 	void AddRoom();
 
 	void SelectSquare(int32 x, int32 y, int32 distance);
@@ -64,5 +64,9 @@ private:
 	void SelectDiamond(int32 x, int32 y, int32 distance);
 	
 	bool CreateQuadRoom(int32 x, int32 y, int32 sizeX, int32 sizeY);
+	// GH: Generate a walkway into a room. 
+	void AddWalkway(Room* start);
 
+	// GH: Add the inline?
+	//Room* GetEndRoom() { return  }
 };
