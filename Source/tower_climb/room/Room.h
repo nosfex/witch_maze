@@ -18,17 +18,21 @@ public:
 	int32 GetHeight()					{ return height; }
 	void SetHeight(int32 h)				{ height = h; }
 	
-	void GetXY(int32 &rX, int32 & rY)	{ rX = x; rY = y; }
+	void GetXY(int32 &rX, int32 & rY)	
+	{ 
+		rX = x; 
+		rY = y; 
+	}
 	void SetXY(int32 rX, int32 rY)		{ x = rX; y = rY; }
 
 	void SetParent(Room* parent)		{ Parent = parent; }
 	Room* GetParent()					{ return Parent; }
 
 	TArray<Room*> GetNearestRooms()		{ return NearestRooms; }
-
+	int32 x, y;
 private:
 
-	int32 x, y;
+	
 	int32 width, height;
 	
 	Room* Parent;

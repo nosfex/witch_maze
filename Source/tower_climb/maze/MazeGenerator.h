@@ -56,7 +56,7 @@ private:
 	void PickPosition(int32 x, int32 y);
 
 	TArray<ABaseTile*> Tiles;
-	
+	UFUNCTION(BlueprintCallable)
 	void AddRoom();
 
 	void SelectSquare(int32 x, int32 y, int32 distance);

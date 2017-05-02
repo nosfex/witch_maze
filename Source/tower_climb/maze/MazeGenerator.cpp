@@ -104,24 +104,22 @@ void AMazeGenerator::AddRoom()
 
 	// GH: Connect the rooms. Get Beginning + End and figure out how to move from there
 	Room* begin = Rooms[0];
-	Room* end	= Rooms[Rooms.Num() - 1]; 
+	Room* end	= Rooms.Last();;
+	
 	
 	TIndexedContainerIterator<TArray<Room*>, Room*, int32> iter = Rooms.CreateIterator();
 	// GH: Fuck you UE, no begin / end iterators.
 	// GH: While first!=end, run and build the list of possible connectors
+	
+	UE_LOG(LogTemp, Warning, TEXT("iter index%i room size%i"), iter.GetIndex(), Rooms.Num());
 	Room parent;
+	
 	// GH: No euristics behind the parent selection so far.
 	while (*iter != end)
 	{
 		// GH: NO PARENTS, BATMAN NODE
-		if (*iter == begin)
-		{
-			(*iter)->SetParent(nullptr);
-		}
-		else
-		{
-			(*iter)->SetParent(&parent);
-		}
+		//UE_LOG(LogTemp, Warning, TEXT("NODE val %d"), parent);
+		(*iter)->SetParent(&parent);
 			
 		iter++;
 		parent = *(*iter);
@@ -135,11 +133,17 @@ void AMazeGenerator::AddWalkway(Room* start)
 	// GH: Linearity is best boi
 	Room* parent = start->GetParent();
 	// GH: Room positions, start+parent
-	int32 x, y, pX, pY;
+	int32 x = 0;
+	int32 y = 0;
+	int32 pX = 0;
+	int32 pY = 0;
 	// GH: Get map position
 	start->GetXY(x, y);
-	parent->GetXY(pX, pY);
+//	pX = parent->x;
+//	pY = parent->y;
 
+	//UE_LOG(LogTemp, Warning, TEXT("pxy: %d"), parent);
+	/*
 	// GH: Get distance
 	int32 dX = abs(x - pX);
 	int32 dY = abs(y - pY);
@@ -147,17 +151,19 @@ void AMazeGenerator::AddWalkway(Room* start)
 	// GH: get direction
 	int32 xDir = x - pX < 0 ? -1 : 1;
 	int32 yDir = y - pY < 0 ? -1 : 1;
+	
+
 
 
 	for (int32 i = 0; i < dX; i++)
 	{
-		PickPosition(x + i * xDir, y);
-	}
-
-	for (int32 j = 0; j < dY; j++)
+		UE_LOG(LogTemp, Warning, TEXT("ParentPicking X: %i"), i);
+		//PickPosition(x + i * xDir, y);
+	}*/
+/*	for (int32 j = 0; j < dY; j++)
 	{
 		PickPosition(x , y + j * yDir);
-	}
+	}*/
 }
 
 
