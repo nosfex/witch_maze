@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out		your copyright notice in the Description page of Project Settings.
 
 #include "tower_climb.h"
 #include "MazeGenerator.h"
@@ -17,6 +17,7 @@ void AMazeGenerator::BeginPlay()
 	Super::BeginPlay();
 	InitializeMap();
 	AddRoom();
+	InitBlocks();
 }
 
 // Called every frame
@@ -39,26 +40,54 @@ void AMazeGenerator::InitializeMap()
 
 		TileMap2D.Add(xTile);
 	}
+	/*for (int32 i = 0; i < MapSize; i++)
+	{
+		for (int32 k = 0; k < MapSize; k++)
+		{
+			PickPosition(i, k);
+		}
+	}*/
+}
+void AMazeGenerator::InitBlocks()
+{
+	for (int x = 0; x < TileMap2D.Num(); x++)
+	{
+		for (int y = 0; y < TileMap2D[x].Num(); y++)
+		{
+			if (TileMap2D[x][y] == 0)
+			{
+				ABaseTile* Tile = GetWorld()->SpawnActor<ABaseTile>(MapTile);
+				Tile->SetActorLocation(InitialLocation + FVector(TileSize * x, TileSize * y, 0.0f));
+				if (Tiles.Num() == 0)
+				{
+					Tile->SetStartingPoint();
+				}
+				Tiles.Add(Tile);
+			}
+		}
+	}
 }
 
 void AMazeGenerator::PickPosition(int32 x, int32 y)
 {
-	ABaseTile* Tile = GetWorld()->SpawnActor<ABaseTile>(MapTile);
-	Tile->SetActorLocation(InitialLocation + FVector(TileSize * x, TileSize * y, 0.0f));
-	if (Tiles.Num() == 0)
-	{
-		Tile->SetStartingPoint();
-	}
-
-	Tiles.Add(Tile);
 	TileMap2D[x][y] = 1;
 }
-
+void AMazeGenerator::RemovePosition(int32 x, int32 y)
+{
+	for (int i = 0; i < Tiles.Num(); i++)
+	{
+		FVector pos = InitialLocation + FVector(TileSize * x, TileSize * y, 0.0f);
+		if(Tiles[i]->GetActorLocation() == pos)
+		{
+			GetWorld()->RemoveActor(Tiles[i], true);
+			TileMap2D[x][y] = 0;
+		}
+	}
+}
 void AMazeGenerator::AddRoom()
 {
 	int32 max = RoomMax;
 
-	
 	while (max >= 0)
 	{
 		// Get a random mid point for the room
@@ -68,13 +97,13 @@ void AMazeGenerator::AddRoom()
 		// Leave the equation
 		if (TileMap2D[x][y] == 1)
 		{
-			
+
 			// GH: Check % on room completion
 			float xPer = 0.0f;
-			
+
 			for (int32 i = 0; i < TileMap2D.Num(); i++)
 			{
-				for (int32 j = 0; j < TileMap2D.Num() ; j++)
+				for (int32 j = 0; j < TileMap2D.Num(); j++)
 				{
 					if (TileMap2D[i][j] == 1)
 					{
@@ -83,7 +112,7 @@ void AMazeGenerator::AddRoom()
 				}
 			}
 
-			if ( (xPer / (float)(TileMap2D.Num() *TileMap2D.Num()) ) >= FloodFillErrorMax	)
+			if ((xPer / (float)(TileMap2D.Num() *TileMap2D.Num())) >= FloodFillErrorMax)
 			{
 				max = -1;
 			}
@@ -99,33 +128,21 @@ void AMazeGenerator::AddRoom()
 		{
 			max--;
 		}
-
+		
+		if (Rooms.Num() > 1)
+		{
+			// GH: auto parenting?
+			Rooms.Last()->SetParent(Rooms[Rooms.Num() - 2]);
+		}
 	}
 
 	// GH: Connect the rooms. Get Beginning + End and figure out how to move from there
-	Room* begin = Rooms[0];
-	Room* end	= Rooms.Last();;
-	
-	
-	TIndexedContainerIterator<TArray<Room*>, Room*, int32> iter = Rooms.CreateIterator();
-	// GH: Fuck you UE, no begin / end iterators.
-	// GH: While first!=end, run and build the list of possible connectors
-	
-	UE_LOG(LogTemp, Warning, TEXT("iter index%i room size%i"), iter.GetIndex(), Rooms.Num());
-	Room parent;
-	
-	// GH: No euristics behind the parent selection so far.
-	while (*iter != end)
-	{
-		// GH: NO PARENTS, BATMAN NODE
-		//UE_LOG(LogTemp, Warning, TEXT("NODE val %d"), parent);
-		(*iter)->SetParent(&parent);
-			
-		iter++;
-		parent = *(*iter);
-	}
+	Room* end = Rooms.Last();
 
-	AddWalkway(end);
+	for (int i = Rooms.Num() -1; i > 1 ; i--)
+	{
+		AddWalkway(Rooms[i]);
+	}
 }
 
 void AMazeGenerator::AddWalkway(Room* start)
@@ -139,31 +156,29 @@ void AMazeGenerator::AddWalkway(Room* start)
 	int32 pY = 0;
 	// GH: Get map position
 	start->GetXY(x, y);
-//	pX = parent->x;
-//	pY = parent->y;
+	parent->GetXY(pX, pY);
 
-	//UE_LOG(LogTemp, Warning, TEXT("pxy: %d"), parent);
-	/*
+	UE_LOG(LogTemp, Warning, TEXT("pxy: %d"), parent);
+	
 	// GH: Get distance
 	int32 dX = abs(x - pX);
 	int32 dY = abs(y - pY);
 
 	// GH: get direction
-	int32 xDir = x - pX < 0 ? -1 : 1;
-	int32 yDir = y - pY < 0 ? -1 : 1;
-	
+	int32 xDir = x - pX < 0 ? 1 : -1;
+	int32 yDir = y - pY < 0 ? 1 : -1;
+	UE_LOG(LogTemp, Warning, TEXT("x: %i pX: %i dX: %i xDir: %i"), x, pX, dX, xDir);
 
 
 
 	for (int32 i = 0; i < dX; i++)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("ParentPicking X: %i"), i);
-		//PickPosition(x + i * xDir, y);
-	}*/
-/*	for (int32 j = 0; j < dY; j++)
+		PickPosition(x + i * xDir, y);
+	}
+	for (int32 j = 0; j < dY; j++)
 	{
 		PickPosition(x , y + j * yDir);
-	}*/
+	}
 }
 
 
@@ -208,6 +223,7 @@ bool AMazeGenerator::CreateQuadRoom(int32 x, int32 y, int32 sizeX, int32 sizeY)
 	// GH: generate the room data structure, for funsies.
 	Room* newRoom = new Room(x, y, sizeX, sizeY);
 	Rooms.Add(newRoom);
+	newRoom->SetParent(NULL);
 	return true;
 }
 

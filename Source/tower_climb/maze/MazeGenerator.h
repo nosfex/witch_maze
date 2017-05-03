@@ -67,6 +67,9 @@ private:
 	// GH: Generate a walkway into a room. 
 	void AddWalkway(Room* start);
 
+	void RemovePosition(int32 x, int32 y);
+	
+	void InitBlocks();
 	// GH: Add the inline?
 	//Room* GetEndRoom() { return  }
 };
