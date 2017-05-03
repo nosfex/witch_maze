@@ -9,6 +9,7 @@ AMazeGenerator::AMazeGenerator()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	RoomMinSize = 2;
 }
 
 // Called when the game starts or when spawned
@@ -17,6 +18,7 @@ void AMazeGenerator::BeginPlay()
 	Super::BeginPlay();
 	InitializeMap();
 	AddRoom();
+	FixEdges();
 	InitBlocks();
 }
 
@@ -31,22 +33,13 @@ void AMazeGenerator::InitializeMap()
 	for(int32 i = 0; i < MapSize; i++)
 	{
 		TArray<int32> xTile;
-		
 		for (int32 k = 0; k < MapSize; k++)
 		{
 			int32 yTile = 0;
 			xTile.Add(yTile);
 		}
-
 		TileMap2D.Add(xTile);
 	}
-	/*for (int32 i = 0; i < MapSize; i++)
-	{
-		for (int32 k = 0; k < MapSize; k++)
-		{
-			PickPosition(i, k);
-		}
-	}*/
 }
 void AMazeGenerator::InitBlocks()
 {
@@ -68,27 +61,35 @@ void AMazeGenerator::InitBlocks()
 	}
 }
 
+void AMazeGenerator::FixEdges()
+{
+	for (int i = 0; i < TileMap2D.Num(); i++)
+	{
+		TileMap2D[0][i]						= 0;
+		TileMap2D[TileMap2D.Num() -1][i]	= 0;
+		TileMap2D[i][0]						= 0;
+		TileMap2D[i][TileMap2D.Num() - 1]	= 0;
+	}
+	
+}
+
 void AMazeGenerator::PickPosition(int32 x, int32 y)
 {
 	TileMap2D[x][y] = 1;
 }
-void AMazeGenerator::RemovePosition(int32 x, int32 y)
+
+FVector AMazeGenerator::GetRoomLocation(Room* room)
 {
-	for (int i = 0; i < Tiles.Num(); i++)
-	{
-		FVector pos = InitialLocation + FVector(TileSize * x, TileSize * y, 0.0f);
-		if(Tiles[i]->GetActorLocation() == pos)
-		{
-			GetWorld()->RemoveActor(Tiles[i], true);
-			TileMap2D[x][y] = 0;
-		}
-	}
+	int32 x, y = 0;
+	room->GetXY(x, y);
+
+	return InitialLocation + FVector(TileSize * x, TileSize * y, 0.0f);
 }
 void AMazeGenerator::AddRoom()
 {
 	int32 max = RoomMax;
 
-	while (max >= 0)
+	while(max > 0)
 	{
 		// Get a random mid point for the room
 		int32 x = FMath::RandRange(0, MapSize - 1);
@@ -97,38 +98,34 @@ void AMazeGenerator::AddRoom()
 		// Leave the equation
 		if (TileMap2D[x][y] == 1)
 		{
-
 			// GH: Check % on room completion
 			float xPer = 0.0f;
-
-			for (int32 i = 0; i < TileMap2D.Num(); i++)
+			for(int32 i = 0; i < TileMap2D.Num(); i++)
 			{
-				for (int32 j = 0; j < TileMap2D.Num(); j++)
+				for(int32 j = 0; j < TileMap2D.Num(); j++)
 				{
-					if (TileMap2D[i][j] == 1)
+					if(TileMap2D[i][j] == 1)
 					{
 						xPer++;
 					}
 				}
 			}
 
-			if ((xPer / (float)(TileMap2D.Num() *TileMap2D.Num())) >= FloodFillErrorMax)
+			if((xPer / (float)(TileMap2D.Num() *TileMap2D.Num())) >= FloodFillErrorMax)
 			{
 				max = -1;
 			}
 
 			continue;
-
 		}
 
-		int32 width = FMath::RandRange(2, RoomMaxSize);
-		int32 height = FMath::RandRange(2, RoomMaxSize);
+		int32 width	 = FMath::RandRange(RoomMinSize, RoomMaxSize);
+		int32 height = FMath::RandRange(RoomMinSize, RoomMaxSize);
 
 		if (CreateQuadRoom(x, y, width, height))
 		{
 			max--;
 		}
-		
 		if (Rooms.Num() > 1)
 		{
 			// GH: auto parenting?
@@ -136,13 +133,18 @@ void AMazeGenerator::AddRoom()
 		}
 	}
 
+	UE_LOG(LogTemp, Warning, TEXT("ROOMS: %i"), Rooms.Num());
 	// GH: Connect the rooms. Get Beginning + End and figure out how to move from there
 	Room* end = Rooms.Last();
-
 	for (int i = Rooms.Num() -1; i > 1 ; i--)
 	{
 		AddWalkway(Rooms[i]);
 	}
+
+	int32 x, y = 0;
+	Rooms[0]->GetXY(x, y);
+	AController* controller = GetWorld()->GetFirstPlayerController();
+	controller->GetPawn()->SetActorLocation(InitialLocation + FVector(x * TileSize, y * TileSize, 0.0f));
 }
 
 void AMazeGenerator::AddWalkway(Room* start)
@@ -157,28 +159,26 @@ void AMazeGenerator::AddWalkway(Room* start)
 	// GH: Get map position
 	start->GetXY(x, y);
 	parent->GetXY(pX, pY);
-
-	UE_LOG(LogTemp, Warning, TEXT("pxy: %d"), parent);
-	
 	// GH: Get distance
 	int32 dX = abs(x - pX);
 	int32 dY = abs(y - pY);
-
 	// GH: get direction
 	int32 xDir = x - pX < 0 ? 1 : -1;
 	int32 yDir = y - pY < 0 ? 1 : -1;
+
 	UE_LOG(LogTemp, Warning, TEXT("x: %i pX: %i dX: %i xDir: %i"), x, pX, dX, xDir);
-
-
-
 	for (int32 i = 0; i < dX; i++)
 	{
 		PickPosition(x + i * xDir, y);
+	
 	}
-	for (int32 j = 0; j < dY; j++)
+		// GH: Start from X last position
+
+	for (int32 i = 0; i < dY; i++)
 	{
-		PickPosition(x , y + j * yDir);
+		PickPosition(x + (dX * xDir), y + i * yDir);
 	}
+	
 }
 
 

@@ -40,6 +40,10 @@ public:
 	int32 RoomMaxSize;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Room)
+	int32 RoomMinSize;
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Room)
 	int32 RoomMax;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Room)
@@ -67,9 +71,9 @@ private:
 	// GH: Generate a walkway into a room. 
 	void AddWalkway(Room* start);
 
-	void RemovePosition(int32 x, int32 y);
-	
 	void InitBlocks();
-	// GH: Add the inline?
-	//Room* GetEndRoom() { return  }
+	
+	FVector GetRoomLocation(Room* room);
+
+	void FixEdges();
 };
