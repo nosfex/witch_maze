@@ -19,7 +19,6 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -42,7 +41,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Room)
 	int32 RoomMinSize;
 
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Room)
 	int32 RoomMax;
 
@@ -51,7 +49,7 @@ public:
 
 private:
 
-	TArray<Room*> Rooms;
+	TArray<Room*> Rooms; 
 	
 	TArray<TArray<int32>> TileMap2D;
 
