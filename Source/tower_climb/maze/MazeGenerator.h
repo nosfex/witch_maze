@@ -7,6 +7,22 @@
 #include "../room/Room.h"
 #include "MazeGenerator.generated.h"
 
+UENUM(Blueprintable)
+enum EMazeType 
+{
+	EFloodFill  UMETA(DisplayName= "Flood Fill"),
+	EBackTracking UMETA(DisplayName= "Back Tracking")
+};
+
+enum EDirection
+{
+	ENorth	= 1,
+	ESouth	= 2,
+	EEast	= 3,
+	EWest	= 4,
+	EError	= 0
+};
+
 UCLASS(Blueprintable)
 class TOWER_CLIMB_API AMazeGenerator : public AActor
 {
@@ -19,15 +35,17 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-	// Size of the map will be combined
+
+	// Size of the map will be squared
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = MapSize)
 	int32 MapSize;
-
+	// GH: Class ref for the bp we want to instantiate as our maptile
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = MapBaseTile)
-	TSubclassOf<ABaseTile> MapTile;
+	TArray<TSubclassOf<ABaseTile>> MapTile;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = MapInitialLocation)
 	FVector InitialLocation;
@@ -47,7 +65,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Room)
 	float FloodFillErrorMax;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = MazeType)
+	TEnumAsByte<EMazeType> MazeType;
+
 private:
+	TArray<EDirection> Directions;
 
 	TArray<Room*> Rooms; 
 	
@@ -61,17 +83,25 @@ private:
 	UFUNCTION(BlueprintCallable)
 	void AddRoom();
 
-	void SelectSquare(int32 x, int32 y, int32 distance);
-	
-	void SelectDiamond(int32 x, int32 y, int32 distance);
-	
 	bool CreateQuadRoom(int32 x, int32 y, int32 sizeX, int32 sizeY);
 	// GH: Generate a walkway into a room. 
 	void AddWalkway(Room* start);
 
 	void InitBlocks();
-	
-	FVector GetRoomLocation(Room* room);
 
+	// ------------------- Backtrack block -------------------
+	void CarvePassageFrom(int32 x, int32 y);
+	
+	EDirection GetOppositeDirection(EDirection dir);
+
+	void GetNextPosFromDir(EDirection dir, int32 &x, int32 &y);
+
+	EDirection GetRandomDirection();
+
+	FString DirectionToString(EDirection dir);
+
+	// ------------------- General Use -------------------
+	FVector GetRoomLocation(Room* room);
+	
 	void FixEdges();
 };

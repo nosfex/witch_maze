@@ -5,29 +5,43 @@
 
 
 // Sets default values
+//-----------------------------------------------------------------------------
 AMazeGenerator::AMazeGenerator()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	RoomMinSize = 2;
 }
-
+//-----------------------------------------------------------------------------
 // Called when the game starts or when spawned
 void AMazeGenerator::BeginPlay()
 {
 	Super::BeginPlay();
 	InitializeMap();
-	AddRoom();
-	FixEdges();
-	InitBlocks();
-}
+	switch(MazeType)
+	{ 
+		case EMazeType::EFloodFill:
+			AddRoom();
+			FixEdges();
+			InitBlocks();
+			break;
 
+		case EMazeType::EBackTracking:
+			CarvePassageFrom(0, 0);
+			//FixEdges();
+			InitBlocks();
+
+			break;
+
+	}
+}
+//-----------------------------------------------------------------------------
 // Called every frame
 void AMazeGenerator::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 }
-
+//-----------------------------------------------------------------------------
 void AMazeGenerator::InitializeMap()
 {
 	for(int32 i = 0; i < MapSize; i++)
@@ -40,27 +54,53 @@ void AMazeGenerator::InitializeMap()
 		}
 		TileMap2D.Add(xTile);
 	}
+
+	Directions = {EDirection::ENorth, EDirection::ESouth, EDirection::EEast, EDirection::EWest};
 }
+//-----------------------------------------------------------------------------
 void AMazeGenerator::InitBlocks()
 {
-	for (int x = 0; x < TileMap2D.Num(); x++)
+	switch (MazeType)
 	{
-		for (int y = 0; y < TileMap2D[x].Num(); y++)
-		{
-			if (TileMap2D[x][y] == 0)
+		
+
+		case EMazeType::EBackTracking:
+			for(int x = 0 ; x < TileMap2D.Num() ; x ++)
 			{
-				ABaseTile* Tile = GetWorld()->SpawnActor<ABaseTile>(MapTile);
-				Tile->SetActorLocation(InitialLocation + FVector(TileSize * x, TileSize * y, 0.0f));
-				if (Tiles.Num() == 0)
+				for(int y = 0; y < TileMap2D.Num() ; y++)
 				{
-					Tile->SetStartingPoint();
+					ABaseTile* Tile = GetWorld()->SpawnActor<ABaseTile>(MapTile[TileMap2D[x][y]]);
+					Tile->SetActorLocation(InitialLocation + FVector(TileSize * x, TileSize * y, 0.0f));
+					if (Tiles.Num() == 0)
+					{
+						Tile->SetStartingPoint();
+					}
+					Tiles.Add(Tile);
 				}
-				Tiles.Add(Tile);
 			}
-		}
+					
+			break;
+		default:
+			for (int x = 0; x < TileMap2D.Num(); x++)
+			{
+				for (int y = 0; y < TileMap2D[x].Num(); y++)
+				{
+					if (TileMap2D[x][y] == 0)
+					{
+						ABaseTile* Tile = GetWorld()->SpawnActor<ABaseTile>(MapTile[TileMap2D[x][y]]);
+						Tile->SetActorLocation(InitialLocation + FVector(TileSize * x, TileSize * y, 0.0f));
+						if (Tiles.Num() == 0)
+						{
+							Tile->SetStartingPoint();
+						}
+						Tiles.Add(Tile);
+					}
+				}
+			}
+			break;
 	}
 }
-
+//-----------------------------------------------------------------------------
 void AMazeGenerator::FixEdges()
 {
 	for (int i = 0; i < TileMap2D.Num(); i++)
@@ -70,14 +110,13 @@ void AMazeGenerator::FixEdges()
 		TileMap2D[i][0]						= 0;
 		TileMap2D[i][TileMap2D.Num() - 1]	= 0;
 	}
-	
 }
-
+//-----------------------------------------------------------------------------
 void AMazeGenerator::PickPosition(int32 x, int32 y)
 {
 	TileMap2D[x][y] = 1;
 }
-
+//-----------------------------------------------------------------------------
 FVector AMazeGenerator::GetRoomLocation(Room* room)
 {
 	int32 x, y = 0;
@@ -85,6 +124,7 @@ FVector AMazeGenerator::GetRoomLocation(Room* room)
 
 	return InitialLocation + FVector(TileSize * x, TileSize * y, 0.0f);
 }
+//-----------------------------------------------------------------------------
 void AMazeGenerator::AddRoom()
 {
 	int32 max = RoomMax;
@@ -146,7 +186,7 @@ void AMazeGenerator::AddRoom()
 	AController* controller = GetWorld()->GetFirstPlayerController();
 	controller->GetPawn()->SetActorLocation(InitialLocation + FVector(x * TileSize, y * TileSize, 0.0f));
 }
-
+//-----------------------------------------------------------------------------
 void AMazeGenerator::AddWalkway(Room* start)
 {
 	// GH: Linearity is best boi
@@ -172,16 +212,14 @@ void AMazeGenerator::AddWalkway(Room* start)
 		PickPosition(x + i * xDir, y);
 	
 	}
-		// GH: Start from X last position
-
+	// GH: Start from X last position
 	for (int32 i = 0; i < dY; i++)
 	{
 		PickPosition(x + (dX * xDir), y + i * yDir);
 	}
 	
 }
-
-
+//-----------------------------------------------------------------------------
 bool AMazeGenerator::CreateQuadRoom(int32 x, int32 y, int32 sizeX, int32 sizeY)
 {
 	// GH: adjacent coordinates
@@ -189,7 +227,7 @@ bool AMazeGenerator::CreateQuadRoom(int32 x, int32 y, int32 sizeX, int32 sizeY)
 	int32 right		= x + sizeX;
 	int32 top		= y + sizeY;
 	int32 bottom	= y - sizeY;
-
+	// GH: Bound check
 	if (left < 0 || right >= TileMap2D.Num())
 	{
 		return false;
@@ -201,7 +239,6 @@ bool AMazeGenerator::CreateQuadRoom(int32 x, int32 y, int32 sizeX, int32 sizeY)
 	}
 
 	TArray<FVector2D> positions;
-
 	for (int minX = left; minX < right; minX++)
 	{
 		for (int minY = bottom; minY < top; minY++)
@@ -210,7 +247,6 @@ bool AMazeGenerator::CreateQuadRoom(int32 x, int32 y, int32 sizeX, int32 sizeY)
 			{
 				return false;
 			}
-				
 			positions.Add(FVector2D(minX, minY));
 		}
 	}
@@ -226,37 +262,126 @@ bool AMazeGenerator::CreateQuadRoom(int32 x, int32 y, int32 sizeX, int32 sizeY)
 	newRoom->SetParent(NULL);
 	return true;
 }
-
-void AMazeGenerator::SelectSquare(int32 x, int32 y, int32 distance)
+//-----------------------------------------------------------------------------
+void AMazeGenerator::CarvePassageFrom(int32 x, int32 y)
 {
-	int32 left = x - distance;
-	int32 right = x + distance;
-	int32 top = y + distance;
-	int32 bottom = y - distance;
-	
-	if (left >= 0 && bottom >= 0)
+	// GH: Grab the 4 directions and open up
+	int32 nx, ny = 0;
+	EDirection dir;
+
+	// GH: Reset the direction arr
+	Directions.Sort([this](const EDirection a, const EDirection b)
 	{
-		// GH: Occupied, break
-		if (TileMap2D[left][bottom] == 1)
+		return FMath::FRand() < 0.5f;
+	});
+
+	for(int i = 0 ; i < Directions.Num() ; i ++)
+	{
+		// GH: Grab a random dir
+		dir = Directions[i];
+		nx = x;
+		ny = y;
+		//  GH: update the new position
+		GetNextPosFromDir(dir, nx, ny);
+		//  GH: Bound and tile check
+		if ( (ny >= 0 && ny < TileMap2D.Num()) && (nx >= 0 && nx < TileMap2D.Num()) && TileMap2D[nx][ny] == 0)
 		{
-			return;
+			// GH: Update the new direction
+			TileMap2D[x][y] = dir;
+			// GH: set the next tile direction
+			TileMap2D[nx][ny] = GetOppositeDirection(dir);
+			FVector drawpos(TileSize * x, TileSize * y, 0.0f);
+			DrawDebugString(GEngine->GetWorldFromContextObject(this), drawpos, DirectionToString(dir), nullptr, FColor::White, 1000000000.0f);
+			// GH: Recursivitis
+			CarvePassageFrom(nx, ny);
 		}
 	}
-
 }
-
-void AMazeGenerator::SelectDiamond(int32 x, int32 y, int32 distance)
+//-----------------------------------------------------------------------------
+FString AMazeGenerator::DirectionToString(EDirection dir)
 {
 	
-	int32 left		= x - distance;
-	int32 right		= x + distance;
-	int32 top		= y + distance;
-	int32 bottom	= y - distance;
+	switch (dir)
+	{
+		case EDirection::ENorth:
+			return FString("NORTH");
+			break;
 
-	// GH: 4 picks
+		case EDirection::ESouth:
+			return FString("SOUTH");
+			break;
 
+		case EDirection::EEast:
+			return FString("EAST");
+			break;
 
+		case EDirection::EWest:
+			return FString("WEST");;
+			break;
+
+	}
+	return FString("ERROR");
 }
+//-----------------------------------------------------------------------------
+EDirection AMazeGenerator::GetOppositeDirection(EDirection dir)
+{
+	switch (dir)
+	{
 
+		case EDirection::ENorth:	
+			return EDirection::ESouth;
+			break;
 
+		case EDirection::ESouth:
+			return EDirection::ENorth;
+			break;
+
+		case EDirection::EEast:
+			return EDirection::EWest;
+			break;
+
+		case EDirection::EWest:
+			return EDirection::EEast;
+			break;
+
+	}
+
+	return EDirection::EError;
+}
+//-----------------------------------------------------------------------------
+void AMazeGenerator::GetNextPosFromDir(EDirection dir, int32 &x, int32 &y)
+{
+
+	switch (dir)
+	{
+		case EDirection::ENorth:
+			x = x;
+			y = y - 1;
+			break;
+
+		case EDirection::ESouth:
+			x = x;
+			y = y + 1;
+			break;
+
+		case EDirection::EEast:
+			x = x + 1;
+			y = y;
+			break;
+
+		case EDirection::EWest:
+			x = x - 1;
+			y = y;
+			break;
+	}
+}
+//-----------------------------------------------------------------------------
+EDirection AMazeGenerator::GetRandomDirection()
+{
+	int32 rnd = FMath::RandRange(0, Directions.Num() - 1);
+	EDirection dir = Directions[rnd];
+	Directions.RemoveAt(rnd);
+	return dir;
+}
+//-----------------------------------------------------------------------------
 
